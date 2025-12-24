@@ -1,5 +1,18 @@
-from fastapi.routing import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List, Annotated
 
+
+from app.models import Task, User
+
+
+from app.schemas import TaskCreate, TaskUpdate, TaskResponse
+
+
+from app.core.dependencies import get_db
+
+
+from app.api.auth import get_current_user
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 

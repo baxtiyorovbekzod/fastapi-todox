@@ -1,7 +1,7 @@
 from typing import Annotated, List
 from uuid import uuid1
 import shutil
-
+import os
 from fastapi import Form, Depends, HTTPException, status, File, UploadFile
 from fastapi.routing import APIRouter
 from sqlalchemy.orm import Session
@@ -61,16 +61,45 @@ def get_category_list(
     return categories
 
 
-@router.get("/{pk}")
-def get_one_category(pk: int):
-    pass
+@router.get("/id")
+def get_one_category(id: int):
+    
+    id: int
+    user: Annotated[User, Depends(get_current_user)]
+    db: Annotated[Session, Depends(get_db)]
+
+    category = db.query(Category).filter(Category.id == id).first()
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found",
+        )
+    return category
 
 
-@router.put("/{pk}")
+@router.put("/id")
 def update_category():
     pass
 
 
-@router.delete("/{pk}")
-def delete_category():
-    pass
+
+@router.delete("/{id}")
+def delete_category(
+    id: int,
+    db: Annotated[Session, Depends(get_db)],
+    admin: Annotated[User, Depends(get_admin)],
+):
+    category = db.query(Category).filter(Category.id == id).first()
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found",
+        )
+
+    
+    if category.icon and os.path.exists(category.icon):
+        os.remove(category.icon)
+
+    db.delete(category)
+    db.commit()
+    return {"detail": "Category deleted successfully"}
