@@ -1,7 +1,8 @@
 from typing import Annotated, Optional, List
+from datetime import datetime
 
 from fastapi.routing import APIRouter
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from ..core.dependencies import get_db
@@ -11,6 +12,26 @@ from ..schemas.tasks import TaskCreate, TaskResponse, TaskUpdate
 from .deps import get_current_user, get_user, get_admin
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+
+@router.get("/filered", response_model=List[TaskResponse])
+def get_filtered_tasks(
+    user: Annotated[User, Depends(get_user)],
+    db: Annotated[Session, Depends(get_db)],
+    status: Annotated[Optional[TaskStatus], Query()] = None,
+    priority: Annotated[Optional[Priority], Query()] = None,
+    due_date: Annotated[Optional[datetime], Query()] = None,
+):
+    query = db.query(Task).filter(Task.user_id == user.user_id)
+    if status is not None:
+        query = query.filter(Task.status == status)
+    if priority is not None:
+        query = query.filter(Task.priority == priority)
+    if due_date is not None:
+        query = query.filter(Task.due_date <= due_date)
+
+    tasks = query.all()
+    return tasks
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=TaskResponse)
@@ -143,3 +164,5 @@ def delete_task(
     db.commit()
 
     return {"detail": "Task deleted successfully."}
+
+
